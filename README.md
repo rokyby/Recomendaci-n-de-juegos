@@ -19,12 +19,19 @@ OpenDatasets (para descargar desde Kaggle)
 
 
 
+
 Descargar los datos de Kaggle
 
 pip install pandas numpy matplotlib opendatasets
 
 import opendatasets as od
 od.download("https://www.kaggle.com/datasets/joebeachcapital/top-1000-steam-games")
+
+instalar(ejecutar los siguientes comandos)
+
+pip install flask
+
+python app.py
 
 
  Notas
