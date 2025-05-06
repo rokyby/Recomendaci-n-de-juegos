@@ -25,3 +25,14 @@ pip install pandas numpy matplotlib opendatasets
 
 import opendatasets as od
 od.download("https://www.kaggle.com/datasets/joebeachcapital/top-1000-steam-games")
+
+
+ Notas
+Asegúrate de que los nombres de los juegos coincidan exactamente con los del dataset.
+
+Se recomienda limpiar y normalizar descripciones o categorías si se desea extender el sistema más allá de los géneros.
+
+📖 Créditos
+Dataset original de Kaggle: Top 1000 Steam Games
+
+Autor: edwin torres
