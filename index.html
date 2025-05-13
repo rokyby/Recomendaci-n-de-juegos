@@ -30,7 +30,7 @@
 
     <script>
         $(document).ready(function() {
-            $.getJSON('steam_data.json', function(data) {
+            $.getJSON('https://raw.githubusercontent.com/rokyby/Recomendaci-n-de-juegos/refs/heads/main/steam_data.json', function(data) {
                 let tableData = '';
                 data.forEach(game => {
                     tableData += `<tr>
