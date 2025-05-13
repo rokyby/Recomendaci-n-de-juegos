@@ -30,7 +30,7 @@
 
     <script>
         $(document).ready(function() {
-            $.getJSON('top-1000-steam-games/steam_data.json', function(data) {
+            $.getJSON('steam_data.json', function(data) {
                 let tableData = '';
                 data.forEach(game => {
                     tableData += `<tr>
