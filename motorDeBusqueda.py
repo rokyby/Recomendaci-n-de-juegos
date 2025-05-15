@@ -1,32 +1,35 @@
-# Importamos librerías
 import pandas as pd
 from math import sqrt
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
-# Lectura de datos
-juegos = pd.read_csv('games.csv')       # Juegos
-rating = pd.read_csv('ratings.csv')     # Calificaciones de usuarios
+# Leer archivo JSON
+juegos = pd.read_json('steam_data.json')
 
-# Procesamiento de títulos
-juegos['year'] = juegos.title.str.extract('(\(\d{4}\))', expand=False)
-juegos['year'] = juegos.year.str.extract('(\d{4})', expand=False)
-juegos['title'] = juegos.title.str.replace('(\(\d{4}\))', '', regex=True)
-juegos['title'] = juegos['title'].apply(lambda x: x.strip())
+# Renombrar 'name' a 'title' por compatibilidad
+juegos['title'] = juegos['name']
+juegos = juegos.drop('name', axis=1)
 
-# Procesamiento de géneros
-juegos['genres'] = juegos.genres.str.split('|')
+# Si no hay años, lo dejamos vacío o como NaN
+juegos['year'] = None
+
+# Limpiar géneros en formato HTML
+juegos['genres'] = juegos['genres'].apply(lambda x: re.findall(r">([^<]+)<", x))
+
+# Copiar para codificación
 juegos_co = juegos.copy()
 
-# One Hot Encoding para géneros
+# One Hot Encoding de géneros
 for index, row in juegos.iterrows():
     for genre in row['genres']:
         juegos_co.at[index, genre] = 1
 
 juegos_co = juegos_co.fillna(0)
 
+
 # Procesamiento de ratings
-rating = rating.drop('timestamp', axis=1, errors='ignore')  # timestamp puede no existir
+#rating = rating.drop('timestamp', axis=1, errors='ignore')  # timestamp puede no existir
 
 # Ejemplo de entrada del usuario
 usuario_en = [
