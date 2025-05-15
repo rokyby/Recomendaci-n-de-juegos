@@ -1,64 +1,59 @@
+from flask import Flask, jsonify, request, render_template
 import pandas as pd
-import numpy as np
 import re
 
-# Cargar JSON
-juegos = pd.read_json('steam_data.json')
+app = Flask(__name__)
 
-# Preparar campos necesarios
-juegos['title'] = juegos['name']
-juegos['year'] = None
-juegos['gameId'] = juegos.index  # si no existía un ID
-juegos['genres'] = juegos['genres'].apply(lambda x: re.findall(r">([^<]+)<", x))
-juegos = juegos.drop('name', axis=1)
+# Cargar y preparar los datos una sola vez al iniciar el servidor
+df = pd.read_json('static/steam_data.json')
+df['title'] = df['name']
+df['gameId'] = df.index
+df['year'] = None
+df['genres'] = df['genres'].apply(lambda x: re.findall(r">([^<]+)<", x))
+df = df.drop('name', axis=1)
+df['title_norm'] = df['title'].str.lower().str.strip()
 
-# Crear copia para codificación
-juegos_co = juegos.copy()
-
-# One-hot encoding de géneros
-for index, row in juegos.iterrows():
+# One-hot encoding
+df_co = df.copy()
+for index, row in df.iterrows():
     for genre in row['genres']:
-        juegos_co.at[index, genre] = 1
+        df_co.at[index, genre] = 1
+df_co = df_co.fillna(0)
 
-juegos_co = juegos_co.fillna(0)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# Entrada de usuario
-usuario_en = [
-    {'title': 'The Legend of Zelda', 'rating': 5},
-    {'title': 'Minecraft', 'rating': 4.5},
-    {'title': 'Call of Duty', 'rating': 3},
-    {'title': 'Animal Crossing', 'rating': 4},
-    {'title': 'Fortnite', 'rating': 2}
-]
+@app.route('/api/juegos')
+def juegos():
+    top = df[['title', 'short_description', 'categories']].rename(columns={
+        'title': 'name'
+    }).head(1000)
+    return jsonify(top.to_dict(orient='records'))
 
-# Normalizar títulos
-juegos['title_norm'] = juegos['title'].str.lower().str.strip()
-entrada_juegos = pd.DataFrame(usuario_en)
-entrada_juegos['title_norm'] = entrada_juegos['title'].str.lower().str.strip()
+@app.route('/api/recomendar', methods=['POST'])
+def recomendar():
+    entrada = request.get_json()
 
-# Fusión
-id_juegos = juegos[juegos['title_norm'].isin(entrada_juegos['title_norm'].tolist())]
-entrada_juegos = pd.merge(id_juegos, entrada_juegos, on='title_norm')
-entrada_juegos = entrada_juegos.drop(['genres', 'year', 'title_norm'], axis=1)
+    entrada_df = pd.DataFrame(entrada)
+    entrada_df['title_norm'] = entrada_df['title'].str.lower().str.strip()
 
-# Codificación de géneros para juegos del usuario
-juegos_usuario = juegos_co[juegos_co['gameId'].isin(entrada_juegos['gameId'].tolist())]
+    id_juegos = df[df['title_norm'].isin(entrada_df['title_norm'].tolist())]
+    entrada_df = pd.merge(id_juegos, entrada_df, on='title_norm')
+    entrada_df = entrada_df.drop(['genres', 'year', 'title_norm'], axis=1)
 
-# Preparar tabla de géneros
-tabla_generos = juegos_usuario.drop(['gameId', 'title', 'genres', 'year'], axis=1).reset_index(drop=True)
+    juegos_usuario = df_co[df_co['gameId'].isin(entrada_df['gameId'].tolist())]
+    tabla_generos = juegos_usuario.drop(['gameId', 'title', 'genres', 'year'], axis=1).reset_index(drop=True)
+    perfil_usu = tabla_generos.transpose().dot(entrada_df['rating'])
 
-# Perfil del usuario
-perfil_usu = tabla_generos.transpose().dot(entrada_juegos['rating'])
+    generos = df_co.set_index('gameId').drop(['title', 'genres', 'year'], axis=1)
+    recom = (generos * perfil_usu).sum(axis=1) / perfil_usu.sum()
+    recom = recom.sort_values(ascending=False)
 
-# Puntuación para todos los juegos
-generos = juegos_co.set_index('gameId')
-generos = generos.drop(['title', 'genres', 'year'], axis=1)
+    final = df[df['gameId'].isin(recom.head(20).index)]
+    resultado = final[['title', 'short_description', 'categories']]
+    resultado = resultado.rename(columns={'title': 'name'})
+    return jsonify(resultado.to_dict(orient='records'))
 
-# Recomendaciones
-recom = (generos * perfil_usu).sum(axis=1) / perfil_usu.sum()
-recom = recom.sort_values(ascending=False)
-
-# Mostrar resultados
-final = juegos[juegos['gameId'].isin(recom.head(20).index)]
-nfinal = final[['title']]
-print("Juegos recomendados:\n", nfinal)
+if __name__ == '__main__':
+    app.run(debug=True)
