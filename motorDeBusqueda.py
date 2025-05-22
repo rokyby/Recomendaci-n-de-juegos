@@ -1,74 +1,66 @@
 import pandas as pd
-from math import sqrt
 import numpy as np
-import matplotlib.pyplot as plt
 import re
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Leer archivo JSON
-juegos = pd.read_json('steam_data.json')
+juegos = pd.read_json('top-1000-steam-games/steam_data.json')
 
-# Renombrar 'name' a 'title' por compatibilidad
+# Renombrar columna
 juegos['title'] = juegos['name']
 juegos = juegos.drop('name', axis=1)
 
-# Si no hay años, lo dejamos vacío o como NaN
-juegos['year'] = None
-
-# Limpiar géneros en formato HTML
+# Extraer géneros desde HTML
 juegos['genres'] = juegos['genres'].apply(lambda x: re.findall(r">([^<]+)<", x))
 
-# Copiar para codificación
-juegos_co = juegos.copy()
-
 # One Hot Encoding de géneros
+juegos_cod = juegos.copy()
 for index, row in juegos.iterrows():
     for genre in row['genres']:
-        juegos_co.at[index, genre] = 1
+        juegos_cod.at[index, genre] = 1
+juegos_cod = juegos_cod.fillna(0)
 
-juegos_co = juegos_co.fillna(0)
+juegos_cod = juegos_cod.drop(['detailed_description', 'short_description', 'categories'], axis=1, errors='ignore')
 
-# Procesamiento de ratings
-rating = rating.drop('timestamp', axis=1, errors='ignore')  # timestamp puede no existir
+# Añadir ID si no existe
+juegos_cod['gameId'] = juegos_cod.index
 
-# Ejemplo de entrada del usuario
-usuario_en = [
-    {'title': 'The Legend of Zelda', 'rating': 5},
-    {'title': 'Minecraft', 'rating': 4.5},
-    {'title': 'Call of Duty', 'rating': 3},
-    {'title': 'Animal Crossing', 'rating': 4},
-    {'title': 'Fortnite', 'rating': 2}
+# ✅ Entrada del usuario: títulos que le gustaron (sin rating)
+favoritos_usuario = [
+    'Streets of Rogue',
+    'Evolvation',
+    'Counter-Strike ',
+    'My Summer Car ',
+    'theHunter: Call of the Wild™ '
 ]
 
-entrada_juegos = pd.DataFrame(usuario_en)
+# Filtrar los juegos que el usuario indicó
+juegos_usuario = juegos_cod[juegos_cod['title'].isin(favoritos_usuario)]
 
-# Fusión con el dataset principal
-id_juegos = juegos[juegos['title'].isin(entrada_juegos['title'].tolist())]
-entrada_juegos = pd.merge(id_juegos, entrada_juegos)
+# Generar perfil de usuario como suma de vectores de géneros
+perfil_usuario = juegos_usuario.drop(['title', 'genres'], axis=1, errors='ignore').sum().to_frame().T
 
-# Limpieza de columnas innecesarias
-entrada_juegos = entrada_juegos.drop(['genres', 'year'], axis=1)
+# Quitar juegos del usuario para no recomendarlos
+juegos_filtrados = juegos_cod[~juegos_cod['title'].isin(favoritos_usuario)]
 
-# Codificación de géneros para los juegos del usuario
-juegos_usuario = juegos_co[juegos_co['gameId'].isin(entrada_juegos['gameId'].tolist())]
+# Extraer solo columnas de géneros para el resto de juegos
+#generos_cols = perfil_usuario.columns
+#juegos_generos = juegos_filtrados[generos_cols]
+# Extraer solo las columnas numéricas de géneros
+generos_cols = [col for col in perfil_usuario.columns if col not in ['title', 'genres', 'short_description', 'detailed_description']]
+juegos_generos = juegos_filtrados[generos_cols]
 
-# Preparación de tabla de géneros
-juegos_usuario = juegos_usuario.reset_index(drop=True)
-tabla_generos = juegos_usuario.drop(['gameId', 'title', 'genres', 'year'], axis=1)
+# Calcular similitud del coseno entre perfil del usuario y cada juego
+similitudes = cosine_similarity(juegos_generos, perfil_usuario)
 
-# Perfil del usuario
-perfil_usu = tabla_generos.transpose().dot(entrada_juegos['rating'])
+# Agregar las similitudes al DataFrame
+juegos_filtrados = juegos_filtrados.copy()
+juegos_filtrados['similitud'] = similitudes
 
-# Preparación de géneros del dataset completo
-generos = juegos_co.set_index('gameId')
-generos = generos.drop(['title', 'genres', 'year'], axis=1)
+# Ordenar por similitud
+recomendados = juegos_filtrados.sort_values(by='similitud', ascending=False)
 
-# Cálculo de puntuaciones ponderadas
-recom = (generos * perfil_usu).sum(axis=1) / perfil_usu.sum()
-
-# Ordenar y filtrar recomendaciones
-recom = recom.sort_values(ascending=False)
-
-# Mostrar top 20 juegos recomendados
-final = juegos.loc[juegos['gameId'].isin(recom.head(20).index)]
-nfinal = final[['title']]
-print("Juegos recomendados:\n", nfinal)
+# Mostrar top 20 recomendaciones
+top_20 = recomendados.head(20)
+print("🎮 Recomendaciones basadas en géneros similares:\n")
+print(top_20[['title', 'similitud']])
