@@ -4,7 +4,7 @@ top-1000-steam-games/
 ├── steam_data.json          # Archivo JSON generado con los datos relevantes
 ├── recomendador.py          # Código principal del sistema de recomendación
 ├── README.md                # Este archivo
-
+├──top-1000-steam-games/
 
 Requisitos
 Python 3.7+
