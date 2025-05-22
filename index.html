@@ -14,7 +14,11 @@
 </head>
 <body>
     <h1>Top 1000 Juegos de Steam</h1>
-    <button onclick="window.location.href='page1.html'">recomendar</button>
+
+    <button onclick="location.href='page1.html'" style="margin-bottom: 20px;">
+        Ir a página de recomendaciones
+    </button>
+
     <table id="steamTable" class="display">
         <thead>
             <tr>
@@ -22,6 +26,7 @@
                 <th>describcion larga</th>
                 <th>describcion corta</th>
                 <th>categorias</th>
+                <th>genres</th>
             </tr>
         </thead>
         <tbody>
@@ -31,14 +36,15 @@
 
     <script>
         $(document).ready(function() {
-            $.getJSON('https://raw.githubusercontent.com/rokyby/Recomendaci-n-de-juegos/refs/heads/main/steam_data.json', function(data) {
+            $.getJSON('top-1000-steam-games/steam_data.json', function(data) {
                 let tableData = '';
                 data.forEach(game => {
                     tableData += `<tr>
                         <td>${game.name}</td>  
                         <td>${game.detailed_description}</td> 
                         <td>${game.short_description}</td> 
-                        <td>${game.categories}</td>                       
+                        <td>${game.categories}</td>   
+                        <td>${game.genres}</td>                     
                     </tr>`;
                 });
                 $('#steamTable tbody').html(tableData);

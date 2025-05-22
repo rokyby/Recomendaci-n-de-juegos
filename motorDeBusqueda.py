@@ -1,59 +1,74 @@
-from flask import Flask, jsonify, request, render_template
 import pandas as pd
+from math import sqrt
+import numpy as np
+import matplotlib.pyplot as plt
 import re
 
-app = Flask(__name__)
+# Leer archivo JSON
+juegos = pd.read_json('steam_data.json')
 
-# Cargar y preparar los datos una sola vez al iniciar el servidor
-df = pd.read_json('static/steam_data.json')
-df['title'] = df['name']
-df['gameId'] = df.index
-df['year'] = None
-df['genres'] = df['genres'].apply(lambda x: re.findall(r">([^<]+)<", x))
-df = df.drop('name', axis=1)
-df['title_norm'] = df['title'].str.lower().str.strip()
+# Renombrar 'name' a 'title' por compatibilidad
+juegos['title'] = juegos['name']
+juegos = juegos.drop('name', axis=1)
 
-# One-hot encoding
-df_co = df.copy()
-for index, row in df.iterrows():
+# Si no hay años, lo dejamos vacío o como NaN
+juegos['year'] = None
+
+# Limpiar géneros en formato HTML
+juegos['genres'] = juegos['genres'].apply(lambda x: re.findall(r">([^<]+)<", x))
+
+# Copiar para codificación
+juegos_co = juegos.copy()
+
+# One Hot Encoding de géneros
+for index, row in juegos.iterrows():
     for genre in row['genres']:
-        df_co.at[index, genre] = 1
-df_co = df_co.fillna(0)
+        juegos_co.at[index, genre] = 1
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+juegos_co = juegos_co.fillna(0)
 
-@app.route('/api/juegos')
-def juegos():
-    top = df[['title', 'short_description', 'categories']].rename(columns={
-        'title': 'name'
-    }).head(1000)
-    return jsonify(top.to_dict(orient='records'))
+# Procesamiento de ratings
+rating = rating.drop('timestamp', axis=1, errors='ignore')  # timestamp puede no existir
 
-@app.route('/api/recomendar', methods=['POST'])
-def recomendar():
-    entrada = request.get_json()
+# Ejemplo de entrada del usuario
+usuario_en = [
+    {'title': 'The Legend of Zelda', 'rating': 5},
+    {'title': 'Minecraft', 'rating': 4.5},
+    {'title': 'Call of Duty', 'rating': 3},
+    {'title': 'Animal Crossing', 'rating': 4},
+    {'title': 'Fortnite', 'rating': 2}
+]
 
-    entrada_df = pd.DataFrame(entrada)
-    entrada_df['title_norm'] = entrada_df['title'].str.lower().str.strip()
+entrada_juegos = pd.DataFrame(usuario_en)
 
-    id_juegos = df[df['title_norm'].isin(entrada_df['title_norm'].tolist())]
-    entrada_df = pd.merge(id_juegos, entrada_df, on='title_norm')
-    entrada_df = entrada_df.drop(['genres', 'year', 'title_norm'], axis=1)
+# Fusión con el dataset principal
+id_juegos = juegos[juegos['title'].isin(entrada_juegos['title'].tolist())]
+entrada_juegos = pd.merge(id_juegos, entrada_juegos)
 
-    juegos_usuario = df_co[df_co['gameId'].isin(entrada_df['gameId'].tolist())]
-    tabla_generos = juegos_usuario.drop(['gameId', 'title', 'genres', 'year'], axis=1).reset_index(drop=True)
-    perfil_usu = tabla_generos.transpose().dot(entrada_df['rating'])
+# Limpieza de columnas innecesarias
+entrada_juegos = entrada_juegos.drop(['genres', 'year'], axis=1)
 
-    generos = df_co.set_index('gameId').drop(['title', 'genres', 'year'], axis=1)
-    recom = (generos * perfil_usu).sum(axis=1) / perfil_usu.sum()
-    recom = recom.sort_values(ascending=False)
+# Codificación de géneros para los juegos del usuario
+juegos_usuario = juegos_co[juegos_co['gameId'].isin(entrada_juegos['gameId'].tolist())]
 
-    final = df[df['gameId'].isin(recom.head(20).index)]
-    resultado = final[['title', 'short_description', 'categories']]
-    resultado = resultado.rename(columns={'title': 'name'})
-    return jsonify(resultado.to_dict(orient='records'))
+# Preparación de tabla de géneros
+juegos_usuario = juegos_usuario.reset_index(drop=True)
+tabla_generos = juegos_usuario.drop(['gameId', 'title', 'genres', 'year'], axis=1)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Perfil del usuario
+perfil_usu = tabla_generos.transpose().dot(entrada_juegos['rating'])
+
+# Preparación de géneros del dataset completo
+generos = juegos_co.set_index('gameId')
+generos = generos.drop(['title', 'genres', 'year'], axis=1)
+
+# Cálculo de puntuaciones ponderadas
+recom = (generos * perfil_usu).sum(axis=1) / perfil_usu.sum()
+
+# Ordenar y filtrar recomendaciones
+recom = recom.sort_values(ascending=False)
+
+# Mostrar top 20 juegos recomendados
+final = juegos.loc[juegos['gameId'].isin(recom.head(20).index)]
+nfinal = final[['title']]
+print("Juegos recomendados:\n", nfinal)

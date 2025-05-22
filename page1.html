@@ -28,7 +28,7 @@
 
     <script>
         $(document).ready(function() {
-            $.getJSON('/api/juegos', function(data) {
+            $.getJSON('top-1000-steam-games\steam_data.json', function(data) {
                 let table = $('#steamTable').DataTable({
                     data: data,
                     columns: [
