@@ -33,10 +33,15 @@ Flask – desarrollo de la API y de la interfaz web.
 
 top-1000-steam-games/
 │
+
 ├── steam_app_data.csv       # Dataset original descargado desde Kaggle
+
 ├── steam_data.json          # Archivo JSON generado con los datos relevantes
+
 ├── recomendador.py          # Código principal del sistema de recomendación
+
 ├── README.md                # Este archivo
+
 ├──top-1000-steam-games/
 
 Requisitos
