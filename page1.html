@@ -10,33 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/datatables.net/js/jquery.dataTables.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css" />
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Top 1000 Juegos de Steam</title>
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- jQuery + DataTables -->
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/datatables.net/js/jquery.dataTables.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt/css/jquery.dataTables.min.css" />
 </head>
 <body>
-  <header>
-    <div class="logo">FullJuegos</div>
-    <nav>
-      <button class="menu-button">☰ Menú</button>
-      <div class="menu-content">
-        <input type="text" placeholder="Buscar..." id="buscadorCustom" />
-        <a href="#">Inicio</a>
-        <a href="#">Recomendaciones</a>
-        <a href="#">Favoritos</a>
-        <a href="#" id="toggleTheme">🌓 Modo Oscuro</a>
-        <a href="#" id="toggleView">🔁 Ver como tarjetas</a>
-      </div>
-    </nav>
-  </header>
-
-  <main class="contenido">
   <header>
     <div class="logo">FullJuegos</div>
     <nav>
@@ -59,12 +34,6 @@
       Recomendar Juegos
     </button>
 
-    <button id="btnRecomendar" class="btn-recomendaciones">
-      Recomendar Juegos
-    </button>
-
-    <div id="tablaVista">
-      <table id="steamTable" class="display">
     <div id="tablaVista">
       <table id="steamTable" class="display">
         <thead>
@@ -73,18 +42,8 @@
             <th>Descripción corta</th>
             <th>Categorías</th>
           </tr>
-          <tr>
-            <th>Nombre</th>
-            <th>Descripción corta</th>
-            <th>Categorías</th>
-          </tr>
         </thead>
         <tbody></tbody>
-      </table>
-    </div>
-
-    <div id="tarjetasVista" class="cards-container" style="display: none;"></div>
-  </main>
       </table>
     </div>
 
@@ -127,26 +86,28 @@
         $('#buscadorCustom').on('keyup', function () {
           table.search(this.value).draw();
         });
+      });
 
-        $('#btnRecomendar').on('click', function () {
-          const juegosUsuario = [
-            { title: 'Dota 2', rating: 5 },
-            { title: 'Counter-Strike: Global Offensive', rating: 4 }
-          ];
+      // Botón recomendar
+      $('#btnRecomendar').on('click', function () {
+        const juegosUsuario = [
+          { title: 'Dota 2', rating: 5 },
+          { title: 'Counter-Strike: Global Offensive', rating: 4 }
+        ];
 
-          $.ajax({
-            url: '/api/recomendar',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(juegosUsuario),
-            success: function (recomendaciones) {
-              renderData(recomendaciones);
-              table.clear().rows.add(recomendaciones).draw();
-            },
-            error: function (xhr, status, error) {
-              alert("Error al obtener recomendaciones: " + error);
-            }
-          });
+        $.ajax({
+          url: '/api/recomendar',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(juegosUsuario),
+          success: function (recomendaciones) {
+            renderData(recomendaciones);
+            const table = $('#steamTable').DataTable();
+            table.clear().rows.add(recomendaciones).draw();
+          },
+          error: function (xhr, status, error) {
+            alert("Error al obtener recomendaciones: " + error);
+          }
         });
       });
 
