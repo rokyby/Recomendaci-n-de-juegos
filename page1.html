@@ -87,27 +87,16 @@
           table.search(this.value).draw();
         });
 
-        $('#btnRecomendar').on('click', function () {
-          const juegosUsuario = [
-            { title: 'Dota 2', rating: 5 },
-            { title: 'Counter-Strike: Global Offensive', rating: 4 }
-          ];
-
-          $.ajax({
-            url: '/api/recomendar',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(juegosUsuario),
-            success: function (recomendaciones) {
-              renderData(recomendaciones);
-              table.clear().rows.add(recomendaciones).draw();
-            },
-            error: function (xhr, status, error) {
-              alert("Error al obtener recomendaciones: " + error);
-            }
-          });
+      $('#btnRecomendar').on('click', function () {
+        $.getJSON('top-1000-steam-games/reco_output.json', function (recomendaciones) {
+          renderData(recomendaciones);
+          const table = $('#steamTable').DataTable();
+          table.clear().rows.add(recomendaciones).draw();
+        }).fail(function (jqxhr, textStatus, error) {
+          alert("No se pudo cargar el archivo de recomendaciones: " + error);
         });
       });
+
 
       // Modo oscuro
       $('#toggleTheme').on('click', () => {
